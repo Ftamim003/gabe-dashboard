@@ -42,10 +42,10 @@ const authApi = baseUrlApi.injectEndpoints({
     }),
     // google  signIn
     googleLogin: build.mutation({
-      query: (tokon) => ({
+      query: (token) => ({
         url: "/auth/google-login",
         method: "POST",
-        body: tokon,
+        body: token,
       }),
     }),
     // forgetPassword
@@ -67,12 +67,12 @@ const authApi = baseUrlApi.injectEndpoints({
     }),
 
     verifyOtp: build.mutation({
-  query: (verifyData) => ({
-    url: "/auth/verify-otp",
-    method: "POST",
-    body: verifyData,
-  }),
-}),
+      query: (verifyData) => ({
+        url: "/auth/verify-otp",
+        method: "POST",
+        body: verifyData,
+      }),
+    }),
 
     // user catch
     userInfo: build.query({
@@ -95,5 +95,5 @@ export const {
   useRoleSetAndUpdateMutation,
   useUserInfoQuery,
   useGoogleLoginMutation,
-  useVerifyOtpMutation
+  useVerifyOtpMutation,
 } = authApi;

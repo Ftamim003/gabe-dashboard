@@ -1,31 +1,101 @@
-"use client"
+"use client";
 
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { ChevronDown, Search } from "lucide-react"
-import { useState } from "react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import Link from "next/link"
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ChevronDown, Search } from "lucide-react";
+import { useState, useMemo } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import Link from "next/link";
 
-// Dummy data (added more for demo)
-const users = Array.from({ length: 20 }, (_, i) => ({
-  name: `User ${i + 1}`,
-  email: `user${i + 1}@gmail.com`,
-  type: i % 2 === 0 ? "Subscribed" : "Free Users",
-  date: "22/08/2025",
-  phase: i % 2 === 0 ? "Phase 2" : "Phase 1",
-  image: "/avatar1.png",
-}))
+import { useGetAllUsersQuery } from "@/redux/features/auth/adminSlice";
+import Image from "next/image";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
-const ROWS_PER_PAGE = 6
+const ROWS_PER_PAGE = 6;
+
+// Define types for the user data
+interface User {
+  id: string;
+  fullName: string;
+  email: string;
+  profilePic?: string;
+  subscribed: string;
+  phase: number;
+  createdAt: string;
+}
+
+interface UsersResponse {
+  data: User[];
+}
 
 export default function UsersPage() {
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useState(1);
+  const { data: usersResponse, isLoading: loading } = useGetAllUsersQuery("");
 
-  const totalPages = Math.ceil(users.length / ROWS_PER_PAGE)
+  // Cast the response to our expected type and provide fallback
+  const users = (usersResponse as UsersResponse)?.data || [];
 
-  const startIndex = (page - 1) * ROWS_PER_PAGE
-  const paginatedUsers = users.slice(startIndex, startIndex + ROWS_PER_PAGE)
+  console.log("Fetched Users:", users);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
+  const [selectedDateRange, setSelectedDateRange] = useState<string | null>(
+    null
+  );
+
+  // ✅ Filtering Logic
+  const filteredUsers = useMemo(() => {
+    return users.filter((user: User) => {
+      // Search filter (by email or name)
+      const matchesSearch =
+        user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Phase filter
+      const matchesPhase = selectedPhase
+        ? `Phase ${user.phase}` === selectedPhase
+        : true;
+
+      // Date filter
+      let matchesDate = true;
+      if (selectedDateRange === "Last 7 days") {
+        const diff =
+          (new Date().getTime() - new Date(user.createdAt).getTime()) /
+          (1000 * 60 * 60 * 24);
+        matchesDate = diff <= 7;
+      }
+      if (selectedDateRange === "Last 30 days") {
+        const diff =
+          (new Date().getTime() - new Date(user.createdAt).getTime()) /
+          (1000 * 60 * 60 * 24);
+        matchesDate = diff <= 30;
+      }
+
+      return matchesSearch && matchesPhase && matchesDate;
+    });
+  }, [users, searchTerm, selectedPhase, selectedDateRange]);
+
+  // ✅ Pagination
+  const totalPages = Math.ceil(filteredUsers.length / ROWS_PER_PAGE);
+  const startIndex = (page - 1) * ROWS_PER_PAGE;
+  const paginatedUsers = filteredUsers.slice(
+    startIndex,
+    startIndex + ROWS_PER_PAGE
+  );
+
+  if (loading) return <p className="p-6">Loading users...</p>;
 
   return (
     <div className="p-6">
@@ -34,30 +104,48 @@ export default function UsersPage() {
         <h1 className="text-2xl font-semibold text-left">Users & Account</h1>
 
         <div className="flex flex-wrap gap-3">
+          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#0066FF] h-4 w-4" />
             <Input
               placeholder="Search By User ID or Email"
               className="pl-10 w-full sm:w-64 border-[#0066FF]"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
             />
           </div>
 
+          {/* Phase Filter */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className="text-[#0066FF] border-[#0066FF] justify-between w-full sm:w-auto bg-transparent"
+                className="text-[#0066FF] border-[#0066FF]"
               >
-                Phase <ChevronDown className="ml-2 h-4 w-4" />
+                {selectedPhase || "Phase"}{" "}
+                <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Phase 1</DropdownMenuItem>
-              <DropdownMenuItem>Phase 2</DropdownMenuItem>
-              <DropdownMenuItem>Phase 3</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedPhase(null)}>
+                All Phases
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedPhase("Phase 1")}>
+                Phase 1
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedPhase("Phase 2")}>
+                Phase 2
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedPhase("Phase 3")}>
+                Phase 3
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {/* Date Filter */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -68,62 +156,119 @@ export default function UsersPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Last 7 days</DropdownMenuItem>
-              <DropdownMenuItem>Last 30 days</DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setSelectedDateRange("Last 7 days")}
+              >
+                Last 7 days
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setSelectedDateRange("Last 30 days")}
+              >
+                Last 30 days
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden border rounded-md overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
-          <thead className="bg-gray-50 text-left">
-            <tr className="border-b">
-              <th className="px-4 py-3 font-medium">User Name</th>
-              <th className="px-4 py-3 font-medium">Email</th>
-              <th className="px-4 py-3 font-medium">User Type</th>
-              <th className="px-4 py-3 font-medium">Joining Date</th>
-              <th className="px-4 py-3 font-medium">Phase Status</th>
-              <th className="px-4 py-3 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedUsers.map((u, i) => (
-              <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-5 flex items-center gap-3">
-                  <img src={u.image} alt={u.name} className="w-8 h-8 rounded-full object-cover" />
-                  <span>{u.name}</span>
-                </td>
-                <td className="px-4 py-3">{u.email}</td>
-                <td
-                  className={`px-4 py-3 font-medium ${
-                    u.type === "Subscribed" ? "text-red-500" : "text-green-600"
-                  }`}
-                >
-                  {u.type}
-                </td>
-                <td className="px-4 py-3">{u.date}</td>
-                <td
-                  className={`px-4 py-3 font-medium ${
-                    u.phase === "Phase 2" ? "text-red-500" : "text-green-600"
-                  }`}
-                >
-                  {u.phase}
-                </td>
-                <td className="px-4 py-3 text-blue-600 cursor-pointer">
-  <Link href={`/user-information/${i+1}`}>Profile</Link>
-</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Card className="w-full">
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Subscription Type</TableHead>
+                <TableHead>Joining Date</TableHead>
+                <TableHead>Phase Status</TableHead>
+                <TableHead>View Profile</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="text-center py-6 text-gray-500"
+                  >
+                    No users found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedUsers.map((user: User, index: number) => (
+                  <TableRow key={index}>
+                    {/* User avatar + name */}
+                    <TableCell className="w-30 mx-auto font-medium flex items-center gap-2">
+                      <Image
+                        src={user.profilePic || "/avatar1.png"}
+                        alt={user.fullName}
+                        width={32}
+                        height={32}
+                        className="w-8 h-8 rounded-full object-cover"
+                        unoptimized
+                      />
+                      <span>{user.fullName}</span>
+                    </TableCell>
+
+                    {/* Email */}
+                    <TableCell>{user.email}</TableCell>
+
+                    {/* User Type */}
+                    <TableCell>
+                      <span
+                        className={
+                          user.subscribed === "SUBSCRIBED"
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }
+                      >
+                        {user.subscribed === "SUBSCRIBED"
+                          ? "Subscribed"
+                          : "Free User"}
+                      </span>
+                    </TableCell>
+
+                    {/* Joining Date */}
+                    <TableCell>
+                      {new Date(user.createdAt).toLocaleDateString()}
+                    </TableCell>
+
+                    {/* Phase Status */}
+                    <TableCell>
+                      <span
+                        className={
+                          user.phase === 3
+                            ? "text-blue-600"
+                            : user.phase === 2
+                            ? "text-red-600"
+                            : "text-green-600"
+                        }
+                      >
+                        {user.phase ? `Phase ${user.phase}` : "No Phase"}
+                      </span>
+                    </TableCell>
+
+                    {/* Actions */}
+                    <TableCell className="text-blue-600 cursor-pointer">
+                      <Link
+                        href={`/admin-dashboard/user-information/${user.id}`}
+                      >
+                        Profile
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {/* Pagination */}
       <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
         <p>
-          Showing page {page} of {totalPages}
+          Showing page {page} of {totalPages || 1}
         </p>
         <div className="flex items-center gap-1">
           <Button
@@ -158,5 +303,5 @@ export default function UsersPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

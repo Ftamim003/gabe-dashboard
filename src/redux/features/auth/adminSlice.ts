@@ -24,15 +24,21 @@ interface PasswordData {
   confirmPassword: string;
 }
 
-export interface User {
-  profilePic: string;
-  fullName: string;
-  email: string;
-  subscribed: "FREE_USER" | "SUBSCRIBED";
-  createdAt: string;
-  phase: number | null;
-  missions: Mission[];
-}
+// export interface User {
+//   id: string;
+//   profilePic: string;
+//   fullName: string;
+//   email: string;
+//   gender: string;
+//   age: number;
+//   height: number;
+//   weight: number;
+//   level: string;
+//   status: "ACTIVE" | "INACTIVE";
+//   subscribed: "FREE_USER" | "SUBSCRIBED";
+//   createdAt: string;
+//   phase?: string | number | null;
+// }
 
 interface AdminState {
   adminInfo: AdminInfo | null;
@@ -61,39 +67,76 @@ export const adminApi = baseUrlApi.injectEndpoints({
     fetchAdminInfo: build.query({
       query: () => ({
         url: `/auth/me`,
-        method: "GET"
-      }),
-    }),
-
-    
-   
-  updateAdminInfo: build.mutation<AdminInfo, FormData>({
-  query: (formData) => ({
-    url: "/admin/update-admin",
-    method: "PUT",
-    body: formData,
-  }),
-}),
-
-   fetchAdminStats: build.query({
-      query: () => ({
-        url: "/admin/getTotal", // <-- your backend endpoint
         method: "GET",
-        
       }),
     }),
 
-    getAllUsers: build.query<any[], void>({
+    updateAdminInfo: build.mutation<AdminInfo, FormData>({
+      query: (formData) => ({
+        url: "/admin/update-admin",
+        method: "PUT",
+        body: formData,
+      }),
+    }),
+
+    fetchAdminStats: build.query({
+      query: () => ({
+        url: "/admin/getTotal",
+        method: "GET",
+      }),
+    }),
+
+    getAllUsers: build.query({
       query: () => ({
         url: "/admin/getAllUser",
         method: "GET",
       }),
-      
     }),
 
-    
-  changePassword: build.mutation({
-    query: ({body,token}) => ({
+    getSingleUser: build.query({
+      query: ({ userId }) => ({
+        url: `/admin/getSingleUser/${userId}`,
+        method: "GET",
+      }),
+    }),
+
+    getNotifications: build.query({
+      query: () => ({
+        url: "/admin/getAllNotifications",
+        method: "GET",
+      }),
+    }),
+
+    suspendUser: build.mutation({
+      query: (userId) => ({
+        url: `/admin/suspend/${userId}`,
+        method: "PATCH",
+      }),
+    }),
+
+    markAllAsRead: build.mutation({
+      query: () => ({
+        url: `/admin/markAllRead`,
+        method: "PATCH",
+      }),
+    }),
+
+    deleteAllNotifications: build.mutation({
+      query: () => ({
+        url: `/admin/deleteAllNotifications`,
+        method: "DELETE",
+      }),
+    }),
+
+    markBYIdAsRead: build.mutation({
+      query: (notificationId) => ({
+        url: `/admin/readNotification/${notificationId}`,
+        method: "PATCH",
+      }),
+    }),
+
+    changePassword: build.mutation({
+      query: ({ body, token }) => ({
         url: "/auth/change-password",
         method: "put",
         body,
@@ -105,12 +148,16 @@ export const adminApi = baseUrlApi.injectEndpoints({
   }),
 });
 
-
-
 export const {
   useFetchAdminInfoQuery,
   useUpdateAdminInfoMutation,
   useChangePasswordMutation,
   useFetchAdminStatsQuery,
   useGetAllUsersQuery,
+  useGetSingleUserQuery,
+  useSuspendUserMutation,
+  useGetNotificationsQuery,
+  useMarkAllAsReadMutation,
+  useMarkBYIdAsReadMutation,
+  useDeleteAllNotificationsMutation,
 } = adminApi;
